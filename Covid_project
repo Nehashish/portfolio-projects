@@ -1,0 +1,167 @@
+SELECT * FROM `portfolioproject-378015.covid.covid_death` LIMIT 1000
+
+SELECT *
+FROM `portfolioproject-378015.covid.covid_death`
+WHERE continent IS NOT NULL
+ORDER BY 3,4 
+
+SELECT *
+FROM `portfolioproject-378015.covid.covid_vaccination`
+ORDER BY 5,6
+
+-- Select data we are going to use
+SELECT location, date, total_cases,new_cases, total_deaths,population
+FROM `portfolioproject-378015.covid.covid_death`
+ORDER BY 1,2
+
+-- We are looking into total cases and total deaths in US
+-- Calculating percentage of deaths
+--shows likihood of the survival in Unites states and india
+
+SELECT location, date, total_cases, total_deaths,(total_deaths/total_cases)*100 AS percentage_death
+FROM `portfolioproject-378015.covid.covid_death`
+WHERE location = 'United States'
+ORDER BY 1,2
+
+SELECT location, date, total_cases, total_deaths,(total_deaths/total_cases)*100 AS percentage_death
+FROM `portfolioproject-378015.covid.covid_death`
+WHERE location = 'India' 
+ORDER BY 1,2
+
+--Looking at total cases vs total deaths
+--shows likihood of the survival in Unites states and india
+SELECT location, date, total_cases, population,(total_cases/population)*100 AS percentage_populationInfected
+FROM `portfolioproject-378015.covid.covid_death`
+--WHERE location = 'United States'
+ORDER BY 1,2
+
+
+--looking at countries with highest infection rate campare to population
+
+SELECT location,population, MAX(total_cases) AS HightestInfectionRate,MAX((total_cases/population))*100 AS percentage_populationInfected
+FROM `portfolioproject-378015.covid.covid_death`
+--WHERE location = 'United States'
+GROUP BY location,population
+ORDER BY percentage_populationInfected DESC
+
+-- showing countries with the highest death count per population
+
+SELECT location,MAX(total_deaths) As TotalDeathCount
+FROM `portfolioproject-378015.covid.covid_death`
+--WHERE location = 'United States'
+WHERE continent IS NOT NULL
+GROUP BY location
+ORDER BY TotalDeathCount DESC
+
+--LETS'S BREAK THINGS DOWN BY Location
+
+SELECT location,MAX(total_deaths) As TotalDeathCount
+FROM `portfolioproject-378015.covid.covid_death`
+--WHERE location = 'United States'
+WHERE continent IS  NULL
+GROUP BY location
+ORDER BY TotalDeathCount DESC
+
+
+--LETS'S BREAK THINGS DOWN BY CONTINENT
+-- Showing continents with highest deaths
+
+SELECT continent,MAX(total_deaths) As TotalDeathCount
+FROM `portfolioproject-378015.covid.covid_death`
+--WHERE location = 'United States'
+WHERE continent IS NOT NULL
+GROUP BY continent
+ORDER BY TotalDeathCount DESC
+
+-- Showing continents with lowest deaths
+
+SELECT continent,MIN(total_deaths) As Total_Lowest_DeathCount
+FROM `portfolioproject-378015.covid.covid_death`
+--WHERE location = 'United States'
+WHERE continent IS NOT NULL
+GROUP BY continent
+ORDER BY Total_Lowest_DeathCount DESC
+
+
+--GLOBAL NUMBERS
+
+
+SELECT date, SUM(new_cases) AS total_cases, SUM(new_deaths) AS total_deaths, SUM(new_deaths)/ SUM(new_cases)*100 AS percentageofsum
+FROM `portfolioproject-378015.covid.covid_death`
+--WHERE location = 'United States'
+WHERE continent IS NOT NULL
+GROUP BY date
+ORDER BY 1,2
+
+--TOTAL CASES IN THE WORLD
+
+SELECT SUM(new_cases) AS total_cases, SUM(new_deaths) AS total_deaths, SUM(new_deaths)/ SUM(new_cases)*100 AS percentageofsum
+FROM `portfolioproject-378015.covid.covid_death`
+--WHERE location = 'United States'
+WHERE continent IS NOT NULL
+--GROUP BY date
+ORDER BY 1,2
+
+
+SELECT *
+FROM `portfolioproject-378015.covid.covid_vaccination`
+
+--JOINING TWO TABLES
+-- LOOKING AT TOTAL POPULATION VS POPULATION
+
+SELECT dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations
+FROM `portfolioproject-378015.covid.covid_death` dea
+JOIN `portfolioproject-378015.covid.covid_vaccination` vac
+ ON dea.location = vac.location
+ AND dea.date = vac.date
+ WHERE  dea.continent IS NOT NULL
+ ORDER BY 2,3 
+
+ --DOING PARTITION BY
+
+ 
+SELECT dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations,
+SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location,dea.date) AS rollingpeoplevaccinated,
+    (rollingpeoplevaccinated/population)*100
+FROM `portfolioproject-378015.covid.covid_death` dea
+JOIN `portfolioproject-378015.covid.covid_vaccination` vac
+ ON dea.location = vac.location
+ AND dea.date = vac.date
+ WHERE  dea.continent IS NOT NULL ORDER BY 2,3 
+
+ --USE CTE
+WITH popvsvac AS 
+(
+    SELECT dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations,
+SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location,dea.date) AS rollingpeoplevaccinated
+FROM `portfolioproject-378015.covid.covid_death` dea
+JOIN `portfolioproject-378015.covid.covid_vaccination` vac
+ ON dea.location = vac.location
+ AND dea.date = vac.date
+ WHERE  dea.continent IS NOT NULL
+ --ORDER BY 2,3 
+)
+SELECT * , (rollingpeoplevaccinated/population)*100 AS peoplevacpercentage
+from popvsvac
+ 
+
+--Using Views to store data for later visualization
+
+CREATE VIEW covid.PercentPopulationVaccinated AS
+  SELECT dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations,
+SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location,dea.date) AS rollingpeoplevaccinated
+FROM `portfolioproject-378015.covid.covid_death` dea
+JOIN `portfolioproject-378015.covid.covid_vaccination` vac
+ ON dea.location = vac.location
+ AND dea.date = vac.date
+ WHERE  dea.continent IS NOT NULL
+ --ORDER BY 2,3 
+
+--Looking at total cases vs total deaths
+--creating view
+CREATE VIEW covid.totalcase_totaldeath AS
+SELECT location, date, total_cases, population,(total_cases/population)*100 AS percentage_populationInfected
+FROM `portfolioproject-378015.covid.covid_death`
+--WHERE location = 'United States'
+ORDER BY 1,2
+
